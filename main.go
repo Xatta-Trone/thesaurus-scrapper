@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	const PORT = "8081"
+	const PORT = ":8081"
 	r := gin.Default()
 	r.Use(cors.Default())
 
