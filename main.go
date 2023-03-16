@@ -29,6 +29,11 @@ func main() {
 
 		fmt.Println(data, err)
 
+		if err != nil && strings.Contains(strings.ToLower(err.Error()), "too many requests") {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
+			return
+		}
+
 		if err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 			return
@@ -45,7 +50,7 @@ func main() {
 	URL := ""
 
 	if runtime.GOOS == "windows" {
-		URL = "localhost:" + PORT
+		URL = "localhost" + PORT
 	} else {
 		URL = PORT
 	}
