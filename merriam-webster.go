@@ -59,9 +59,9 @@ func GetMWData(word string) (MWResult, error) {
 		return result, nil
 	}
 
-	fmt.Println(eachPoS.Children().Find(".dt").Length())
+	fmt.Println(eachPoS.Children().Find(".thes-word-list-item").Length())
 
-	if eachPoS.Children().Find(".dt").Length() == 0 {
+	if eachPoS.Children().Find(".thes-word-list-item").Length() == 0 {
 		fmt.Println("No data available")
 		return result, nil
 
@@ -82,15 +82,18 @@ func GetMWData(word string) (MWResult, error) {
 		// fmt.Println(asIn)
 		eachPos.AsIn = strings.TrimSpace(asIn)
 
-		// definition
-		def := s.Find(".dt").Get(0).FirstChild.Data
-		// example
-		ex := s.Find(".dt").Children().Text()
+		if s.Find(".dt").Length() > 0 {
+			// definition
+			def := s.Find(".dt").Get(0).FirstChild.Data
+			// example
+			ex := s.Find(".dt").Children().Text()
 
-		// fmt.Println(strings.TrimSpace(def))
-		// fmt.Println(strings.TrimSpace(ex))
-		eachPos.Definition = strings.TrimSpace(def)
-		eachPos.Example = strings.TrimSpace(ex)
+			// fmt.Println(strings.TrimSpace(def))
+			// fmt.Println(strings.TrimSpace(ex))
+			eachPos.Definition = strings.TrimSpace(def)
+			eachPos.Example = strings.TrimSpace(ex)
+
+		}
 
 		// synonyms
 		synonyms := []string{}
