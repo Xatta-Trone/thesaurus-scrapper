@@ -27,7 +27,7 @@ type PartsOfSpeeches struct {
 func GetMWData(word string) (MWResult, error) {
 
 	var result MWResult
-	result.Word = word
+	
 
 	// Request the HTML page.
 	res, err := http.Get("https://www.merriam-webster.com/thesaurus/" + word)
@@ -108,6 +108,7 @@ func GetMWData(word string) (MWResult, error) {
 
 		eachPos.Synonyms = synonyms
 		eachPos.Antonyms = antonyms
+		result.Word = word
 
 		result.PartsOfSpeeches = append(result.PartsOfSpeeches, eachPos)
 
