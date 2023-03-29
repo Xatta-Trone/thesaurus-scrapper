@@ -27,7 +27,6 @@ type PartsOfSpeeches struct {
 func GetMWData(word string) (MWResult, error) {
 
 	var result MWResult
-	
 
 	// Request the HTML page.
 	res, err := http.Get("https://www.merriam-webster.com/thesaurus/" + word)
@@ -58,6 +57,14 @@ func GetMWData(word string) (MWResult, error) {
 	if eachPoS.Length() == 0 {
 		fmt.Println("No data available")
 		return result, nil
+	}
+
+	fmt.Println(eachPoS.Children().Find(".dt").Length())
+
+	if eachPoS.Children().Find(".dt").Length() == 0 {
+		fmt.Println("No data available")
+		return result, nil
+
 	}
 
 	eachPoS.Each(func(i int, s *goquery.Selection) {
