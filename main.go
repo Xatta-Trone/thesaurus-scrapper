@@ -47,6 +47,30 @@ func main() {
 		c.JSON(200, gin.H{"data": data})
 	})
 
+	r.GET("/mw/:word", func(c *gin.Context) {
+
+		data, err := GetMWData(c.Param("word"))
+
+		fmt.Println(data, err)
+
+		if err != nil && strings.Contains(strings.ToLower(err.Error()), "too many requests") {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			return
+		}
+
+		if len(data.PartsOfSpeeches) == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "No data found"})
+			return
+		}
+
+		c.JSON(200, gin.H{"data": data})
+	})
+
 	URL := ""
 
 	if runtime.GOOS == "windows" {
@@ -56,6 +80,8 @@ func main() {
 	}
 
 	r.Run(URL)
+
+	
 
 }
 
