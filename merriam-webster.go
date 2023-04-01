@@ -16,12 +16,16 @@ type MWResult struct {
 }
 
 type PartsOfSpeeches struct {
-	PartsOfSpeech string   `json:"parts_of_speech"`
-	AsIn          string   `json:"as_in"`
-	Definition    string   `json:"definition"`
-	Example       string   `json:"example"`
-	Synonyms      []string `json:"synonyms"`
-	Antonyms      []string `json:"antonyms"`
+	PartsOfSpeech string `json:"parts_of_speech"`
+	Data          []Data `json:"data"`
+}
+
+type Data struct {
+	AsIn       string   `json:"as_in"`
+	Definition string   `json:"definition"`
+	Example    string   `json:"example"`
+	Synonyms   []string `json:"synonyms"`
+	Antonyms   []string `json:"antonyms"`
 }
 
 func GetMWData(word string) (MWResult, error) {
@@ -77,50 +81,59 @@ func GetMWData(word string) (MWResult, error) {
 
 		eachPos.PartsOfSpeech = strings.TrimSpace(pos)
 
-		// as in word
-		asIn := s.Find(".as-in-word").Text()
-		// fmt.Println(asIn)
-		eachPos.AsIn = strings.TrimSpace(asIn)
+		// now go for each as in words
 
-		if s.Find(".dt").Length() > 0 {
-			// definition
-			def := s.Find(".dt").Get(0).FirstChild.Data
-			// example
-			ex := s.Find(".dt").Children().Text()
+		s.Find(".vg-sseq-entry-item").Each(func(i int, g *goquery.Selection) {
+			var data Data
+			// as in word
+			asIn := g.Find(".as-in-word").Text()
+			// fmt.Println(asIn)
+			data.AsIn = strings.TrimSpace(asIn)
 
-			// fmt.Println(strings.TrimSpace(def))
-			// fmt.Println(strings.TrimSpace(ex))
-			eachPos.Definition = strings.TrimSpace(def)
-			eachPos.Example = strings.TrimSpace(ex)
+			if g.Find(".dt").Length() > 0 {
+				// definition
+				def := g.Find(".dt").Get(0).FirstChild.Data
+				// example
+				ex := g.Find(".dt").Children().Text()
 
-		}
+				// fmt.Println(strings.TrimSpace(def))
+				// fmt.Println(strings.TrimSpace(ex))
+				data.Definition = strings.TrimSpace(def)
+				data.Example = strings.TrimSpace(ex)
 
-		// synonyms
-		synonyms := []string{}
-		antonyms := []string{}
+			}
 
-		// get lists
-		lists := s.Find(".synonyms_list")
+			// synonyms
+			synonyms := []string{}
+			antonyms := []string{}
 
-		// first item is synonyms
-		// second item is antonym
+			// get lists
+			lists := g.Find(".synonyms_list")
 
-		lists.First().Find(".thes-word-list-item").Each(func(i int, s *goquery.Selection) {
-			synonyms = append(synonyms, strings.TrimSpace(s.Text()))
+			// first item is synonyms
+			// second item is antonym
+
+			if lists.Length() > 1 {
+				lists.First().Find(".thes-word-list-item").Each(func(i int, s *goquery.Selection) {
+					synonyms = append(synonyms, strings.TrimSpace(s.Text()))
+				})
+				lists.Eq(1).Find(".thes-word-list-item").Each(func(i int, s *goquery.Selection) {
+					antonyms = append(antonyms, strings.TrimSpace(s.Text()))
+				})
+			}
+
+			// fmt.Println(synonyms)
+			// fmt.Println(antonyms)
+
+			data.Synonyms = synonyms
+			data.Antonyms = antonyms
+
+			eachPos.Data = append(eachPos.Data, data)
+
 		})
-
-		lists.Eq(1).Find(".thes-word-list-item").Each(func(i int, s *goquery.Selection) {
-			antonyms = append(antonyms, strings.TrimSpace(s.Text()))
-		})
-
-		// fmt.Println(synonyms)
-		// fmt.Println(antonyms)
-
-		eachPos.Synonyms = synonyms
-		eachPos.Antonyms = antonyms
-		result.Word = word
 
 		result.PartsOfSpeeches = append(result.PartsOfSpeeches, eachPos)
+		result.Word = word
 
 	})
 
