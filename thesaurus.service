@@ -1,0 +1,14 @@
+[Unit]
+Description=Thesaurus scrapper 
+After=multi-user.target
+
+[Service]
+User=root
+Group=root
+Type=simple
+Restart=always
+RestartSec=5s
+ExecStart=/var/www/thesarus-scrapper/main
+
+[Install]
+WantedBy=multi-user.target
