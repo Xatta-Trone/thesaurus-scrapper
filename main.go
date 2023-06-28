@@ -106,6 +106,7 @@ type Synonym struct {
 func GetResult(word string) (WordResponse, error) {
 
 	var finalResult WordResponse
+	var err error
 
 	// temp PoS and Def
 	tempPoS := []string{}
@@ -115,8 +116,14 @@ func GetResult(word string) (WordResponse, error) {
 		// StartRequestsFunc: func(g *geziyor.Geziyor) {
 		// 	g.GetRendered("https://www.thesaurus.com/browse/"+word, g.Opt.ParseFunc)
 		// },
-		 StartURLs: []string{"https://www.thesaurus.com/browse/"+word},
+		StartURLs: []string{"https://www.thesaurus.com/browse/" + word},
 		ParseFunc: func(g *geziyor.Geziyor, r *client.Response) {
+
+			if r.StatusCode != http.StatusOK {
+				fmt.Println("There was an error, ", r.Status)
+				err = fmt.Errorf("%s", r.Status)
+			}
+
 			// fmt.Println(string(r.Body))
 
 			root := r.HTMLDoc.Find("[data-type='thesaurus-entry-module']")
@@ -157,10 +164,13 @@ func GetResult(word string) (WordResponse, error) {
 
 			singleSynonymObj := Synonym{}
 
-			singleSynonymObj.Definition = tempDef[0]
-			singleSynonymObj.PartsOfSpeech = tempPoS[0]
-			singleSynonymObj.Syns = singleGroup
-			finalResult.Synonyms = append(finalResult.Synonyms, singleSynonymObj)
+			if len(tempDef) > 0 {
+				singleSynonymObj.Definition = tempDef[0]
+				singleSynonymObj.PartsOfSpeech = tempPoS[0]
+				singleSynonymObj.Syns = singleGroup
+				finalResult.Synonyms = append(finalResult.Synonyms, singleSynonymObj)
+
+			}
 
 			// now find the antonyms
 			antonyms := []string{}
@@ -178,7 +188,7 @@ func GetResult(word string) (WordResponse, error) {
 		//BrowserEndpoint: "ws://localhost:3000",
 	}).Start()
 
-	return finalResult, nil
+	return finalResult, err
 
 	// Request the HTML page.
 	res, err := http.Get("https://www.thesaurus.com/browse/" + word)
