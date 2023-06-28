@@ -20,6 +20,12 @@ func main() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
+	r.GET("/",func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "hello there",
+		})
+	})
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
