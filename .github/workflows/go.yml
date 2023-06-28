@@ -36,4 +36,5 @@ jobs:
           cd /var/www/thesarus-scrapper
           git pull origin main
           sudo go build -o main 
-          sudo service thesaurus restart 
+          # sudo service thesaurus restart 
+          sudo pm2 restart thesaurus-scrapper
