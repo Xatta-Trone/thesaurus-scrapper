@@ -112,9 +112,10 @@ func GetResult(word string) (WordResponse, error) {
 	tempDef := []string{}
 
 	geziyor.NewGeziyor(&geziyor.Options{
-		StartRequestsFunc: func(g *geziyor.Geziyor) {
-			g.GetRendered("https://www.thesaurus.com/browse/"+word, g.Opt.ParseFunc)
-		},
+		// StartRequestsFunc: func(g *geziyor.Geziyor) {
+		// 	g.GetRendered("https://www.thesaurus.com/browse/"+word, g.Opt.ParseFunc)
+		// },
+		 StartURLs: []string{"https://www.thesaurus.com/browse/"+word},
 		ParseFunc: func(g *geziyor.Geziyor, r *client.Response) {
 			// fmt.Println(string(r.Body))
 
