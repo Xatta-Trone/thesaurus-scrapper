@@ -110,6 +110,10 @@ func GetResult(word string) (WordResponse, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("=========body==========")
+	fmt.Println(res.Status)
+
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 
@@ -124,7 +128,11 @@ func GetResult(word string) (WordResponse, error) {
 		// log.Fatal(err)
 	}
 
-	container := doc.Find(".MainContentContainer")
+	container := doc.Filter(".wjLcgFJpqs9M6QJsPf5v")
+
+	fmt.Println(container.Length())
+
+	// container := doc.Find(".MainContentContainer")
 
 	// inside MainContentContainer
 	// first ul parts of speech with definition

@@ -127,6 +127,7 @@ func GetMWData(word string) (MWResult, error) {
 
 			data.Synonyms = synonyms
 			data.Antonyms = antonyms
+		
 
 			eachPos.Data = append(eachPos.Data, data)
 
