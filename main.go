@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/geziyor/geziyor"
+	"github.com/geziyor/geziyor/client"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -105,6 +107,78 @@ func GetResult(word string) (WordResponse, error) {
 
 	var finalResult WordResponse
 
+	// temp PoS and Def
+	tempPoS := []string{}
+	tempDef := []string{}
+
+	geziyor.NewGeziyor(&geziyor.Options{
+		StartRequestsFunc: func(g *geziyor.Geziyor) {
+			g.GetRendered("https://www.thesaurus.com/browse/"+word, g.Opt.ParseFunc)
+		},
+		ParseFunc: func(g *geziyor.Geziyor, r *client.Response) {
+			// fmt.Println(string(r.Body))
+
+			root := r.HTMLDoc.Find("[data-type='thesaurus-entry-module']")
+
+			fmt.Println("roost")
+			fmt.Println(root.Length())
+
+			// find the parts of speech with definitions
+			tabList := root.Find("[data-type='thesaurus-entry-tablist']")
+
+			fmt.Println(tabList.Length())
+
+			tabList.Find("li").Each(func(i int, s *goquery.Selection) {
+				fmt.Println(s.Text())
+				whole := s.Text()
+				pos := s.Find("em").Text()
+				def := strings.TrimLeft(strings.ReplaceAll(whole, pos, ""), " ")
+
+				tempPoS = append(tempPoS, pos)
+				tempDef = append(tempDef, def)
+
+				fmt.Println(def)
+				fmt.Println(pos)
+
+			})
+
+			singleGroup := []string{}
+
+			card := root.Find("[data-type='thesaurus-synonyms-card']")
+
+			card.Find("li").Each(func(i int, s *goquery.Selection) {
+				fmt.Println(s.Text())
+				sn := strings.TrimSpace(strings.ReplaceAll(s.Text(), "\n", " "))
+				if len(sn) > 0 {
+					singleGroup = append(singleGroup, sn)
+				}
+			})
+
+			singleSynonymObj := Synonym{}
+
+			singleSynonymObj.Definition = tempDef[0]
+			singleSynonymObj.PartsOfSpeech = tempPoS[0]
+			singleSynonymObj.Syns = singleGroup
+			finalResult.Synonyms = append(finalResult.Synonyms, singleSynonymObj)
+
+			// now find the antonyms
+			antonyms := []string{}
+			aCard := root.Find("[data-type='thesaurus-antonyms-card']")
+			fmt.Println(aCard.Length())
+			aCard.Find("li").Each(func(i int, s *goquery.Selection) {
+				an := strings.TrimSpace(strings.ReplaceAll(s.Text(), "\n", " "))
+
+				if len(an) > 0 {
+					antonyms = append(antonyms, an)
+				}
+			})
+			finalResult.Antonyms = antonyms
+		},
+		//BrowserEndpoint: "ws://localhost:3000",
+	}).Start()
+
+	return finalResult, nil
+
 	// Request the HTML page.
 	res, err := http.Get("https://www.thesaurus.com/browse/" + word)
 	if err != nil {
@@ -148,10 +222,6 @@ func GetResult(word string) (WordResponse, error) {
 		fmt.Println("No definition available")
 		return finalResult, nil
 	}
-
-	// temp PoS and Def
-	tempPoS := []string{}
-	tempDef := []string{}
 
 	// not get the parts of speech
 	defs.Each(func(i int, s *goquery.Selection) {
