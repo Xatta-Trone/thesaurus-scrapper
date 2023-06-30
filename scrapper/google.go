@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -71,7 +72,18 @@ func GetGoogleResult(word string) (*WordStruct, int) {
 	todaysKey := RoundRobinApiKey(API_KEY)
 
 	// Request the HTML page.
-	res, err := http.Get(fmt.Sprintf("http://api.scraperapi.com/?api_key=%s&url=https://www.google.com/search?&hl=en&q=define+%s", todaysKey, word))
+	encoded_url := url.QueryEscape(fmt.Sprintf("https://www.google.com/search?&hl=en&q=define+%s",word))
+	url := fmt.Sprintf("https://api.scrape.do?token=%s&url=%s", todaysKey, encoded_url)
+	method := "GET"
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		fmt.Println(err.Error())
+		errorStatus = 400
+		return &wordS, errorStatus
+	}
+	res, err := client.Do(req)
+	// res, err := http.Get(fmt.Sprintf("https://api.scrape.do?token=%s&url=https://www.google.com/search?&hl=en&q=define+%s", todaysKey, word))
 	if err != nil {
 		fmt.Println(err.Error())
 		errorStatus = 400
@@ -125,7 +137,7 @@ func GetGoogleResult(word string) (*WordStruct, int) {
 	// 4- origin
 
 	// find the main word
-	mainWord := thirdJsSlot.Find(mainWordQueryTag).Text()
+	mainWord := strings.ReplaceAll(thirdJsSlot.Find(mainWordQueryTag).Text(),"·","")
 	fmt.Println("main word", mainWord)
 	// check if it has phonetics and audio in the #1 div
 

@@ -1,4 +1,4 @@
-package main
+package scrapper
 
 import (
 	"errors"
