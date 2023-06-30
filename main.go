@@ -138,6 +138,20 @@ func main() {
 		c.JSON(200, gin.H{"data": data})
 	})
 
+	r.GET("/gg/:word", func(c *gin.Context) {
+
+		data, status := scrapper.GetContents(c.Param("word"))
+
+		fmt.Println(data, status)
+
+		if status != 200 {
+			c.JSON(status, gin.H{"error": "could not find data"})
+			return
+		}
+
+		c.JSON(200, gin.H{"data": data})
+	})
+
 	r.GET("/mw/:word", func(c *gin.Context) {
 
 		data, err := scrapper.GetMWData(c.Param("word"))
