@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
+	"os"
 	"runtime"
 	"strings"
 
@@ -13,16 +15,87 @@ import (
 	"github.com/geziyor/geziyor/client"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	"github.com/xatta-trone/thesaurus-scrapper/scrapper"
 )
 
 func main() {
-	const PORT = ":8081"
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	p := os.Getenv("PORT")
+
+	if p != "" {
+		p = "8081"
+	}
+
+	PORT := fmt.Sprintf(":%s", p)
+
 	r := gin.Default()
 	r.Use(cors.Default())
 
-	r.GET("/",func(c *gin.Context) {
+	type KeyManager struct {
+		Idx int
+		Min int
+		Max int
+	}
+
+	r.GET("/", func(c *gin.Context) {
+		key := ""
+
+		API_KEY := "key1,key2,key3,key4"
+
+		splittedKeys := strings.Split(API_KEY, ",")
+		keysLength := len(splittedKeys)
+
+		if keysLength == 1 {
+			key = API_KEY
+		}
+
+		if keysLength > 1 {
+
+			keysRange := []KeyManager{}
+
+			keysPerDay := int(math.Ceil(30.0 / float64(keysLength)))
+
+			fmt.Println(keysPerDay)
+
+			for i := 0; i < keysLength; i++ {
+				max := (i + 1) * keysPerDay
+				// set the max dey
+				if i == keysLength-1 {
+					max = 32
+				}
+
+				keyRange := KeyManager{
+					Idx: i,
+					Min: i*keysPerDay + 1,
+					Max: max,
+				}
+
+				keysRange = append(keysRange, keyRange)
+
+			}
+
+			fmt.Println(keysRange)
+
+			// now based on current date set the key
+			// _, _, day := time.Now().UTC().Date()
+			day := 12
+
+			for _, keyRange := range keysRange {
+				if day >= keyRange.Min && day <= keyRange.Max {
+					key = splittedKeys[keyRange.Idx]
+				}
+
+			}
+
+		}
+
 		c.JSON(http.StatusOK, gin.H{
-			"message": "/ping",
+			"message": key,
 		})
 	})
 
@@ -49,6 +122,20 @@ func main() {
 
 		if len(data.Synonyms) == 0 {
 			c.JSON(http.StatusNotFound, gin.H{"error": "No data found"})
+			return
+		}
+
+		c.JSON(200, gin.H{"data": data})
+	})
+
+	r.GET("/g/:word", func(c *gin.Context) {
+
+		data, status := scrapper.GetGoogleResult(c.Param("word"))
+
+		fmt.Println(data, status)
+
+		if status != 200 {
+			c.JSON(status, gin.H{"error": "could not find data"})
 			return
 		}
 
