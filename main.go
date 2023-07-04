@@ -135,7 +135,7 @@ func main() {
 			return
 		}
 
-		c.JSON(200, gin.H{"data": data})
+		c.JSON(200, data)
 	})
 
 	r.GET("/gg/:word", func(c *gin.Context) {
@@ -149,7 +149,7 @@ func main() {
 			return
 		}
 
-		c.JSON(200, gin.H{"data": data})
+		c.JSON(200, data)
 	})
 
 	r.GET("/mw/:word", func(c *gin.Context) {
