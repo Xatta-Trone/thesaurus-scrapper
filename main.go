@@ -23,7 +23,9 @@ func main() {
 
 	p := os.Getenv("PORT")
 
-	if p != "" {
+	fmt.Println(p)
+
+	if p == "" {
 		p = "8081"
 	}
 
