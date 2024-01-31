@@ -31,7 +31,7 @@ func GetResult(word string) (WordResponse, error) {
 	// tempDef := []string{}
 	StartURLs := "https://www.thesaurus.com/browse/" + word
 
-	ctx, cancel := chromedp.NewExecAllocator(context.Background(), append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", false))...)
+	ctx, cancel := chromedp.NewExecAllocator(context.Background(), append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", true))...)
 	defer cancel()
 	ctx, cancel = chromedp.NewContext(ctx)
 	defer cancel()
@@ -60,7 +60,7 @@ func GetResult(word string) (WordResponse, error) {
             }
             return length;
         })()`, checkRootXpath), &checkRoot))
-		
+
 	if err != nil {
 		fmt.Println(err)
 		return finalResult, err
