@@ -18,8 +18,8 @@ require (
 	github.com/bytedance/sonic v1.8.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
-	github.com/chromedp/cdproto v0.0.0-20230625224106-7fafe342e117 // indirect
-	github.com/chromedp/chromedp v0.9.1 // indirect
+	github.com/chromedp/cdproto v0.0.0-20240127002248-bd7a66284627 // indirect
+	github.com/chromedp/chromedp v0.9.3 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
 	github.com/geziyor/geziyor v0.0.0-20230315135110-a242b58aaa65 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -30,7 +30,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/gobwas/ws v1.2.1 // indirect
+	github.com/gobwas/ws v1.3.2 // indirect
 	github.com/goccy/go-json v0.10.0 // indirect
 	github.com/gocolly/colly v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -59,7 +59,7 @@ require (
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
 	golang.org/x/crypto v0.10.0 // indirect
 	golang.org/x/net v0.11.0 // indirect
-	golang.org/x/sys v0.9.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.10.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

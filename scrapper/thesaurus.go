@@ -1,15 +1,13 @@
 package scrapper
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
+	"time"
 
-	"github.com/PuerkitoBio/goquery"
-	"github.com/geziyor/geziyor"
-	"github.com/geziyor/geziyor/client"
+	"github.com/chromedp/chromedp"
 )
 
 type WordResponse struct {
@@ -29,189 +27,177 @@ func GetResult(word string) (WordResponse, error) {
 	var err error
 
 	// temp PoS and Def
-	tempPoS := []string{}
-	tempDef := []string{}
+	// tempPoS := []string{}
+	// tempDef := []string{}
+	StartURLs := "https://www.thesaurus.com/browse/" + word
 
-	geziyor.NewGeziyor(&geziyor.Options{
-		// StartRequestsFunc: func(g *geziyor.Geziyor) {
-		// 	g.GetRendered("https://www.thesaurus.com/browse/"+word, g.Opt.ParseFunc)
-		// },
-		StartURLs: []string{"https://www.thesaurus.com/browse/" + word},
-		ParseFunc: func(g *geziyor.Geziyor, r *client.Response) {
+	ctx, cancel := chromedp.NewExecAllocator(context.Background(), append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", false))...)
+	defer cancel()
+	ctx, cancel = chromedp.NewContext(ctx)
+	defer cancel()
 
-			if r.StatusCode != http.StatusOK {
-				fmt.Println("There was an error, ", r.Status)
-				err = fmt.Errorf("%s", r.Status)
-			}
+	// run task list
 
-			// fmt.Println(string(r.Body))
-
-			root := r.HTMLDoc.Find("[data-type='thesaurus-entry-module']")
-
-			fmt.Println("roost")
-			fmt.Println(root.Length())
-
-			// find the parts of speech with definitions
-			tabList := root.Find("[data-type='thesaurus-entry-tablist']")
-
-			fmt.Println(tabList.Length())
-
-			tabList.Find("li").Each(func(i int, s *goquery.Selection) {
-				fmt.Println(s.Text())
-				whole := s.Text()
-				pos := s.Find("em").Text()
-				def := strings.TrimLeft(strings.ReplaceAll(whole, pos, ""), " ")
-
-				tempPoS = append(tempPoS, pos)
-				tempDef = append(tempDef, def)
-
-				fmt.Println(def)
-				fmt.Println(pos)
-
-			})
-
-			singleGroup := []string{}
-
-			card := root.Find("[data-type='thesaurus-synonyms-card']")
-
-			card.Find("li").Each(func(i int, s *goquery.Selection) {
-				fmt.Println(s.Text())
-				sn := strings.TrimSpace(strings.ReplaceAll(s.Text(), "\n", " "))
-				if len(sn) > 0 {
-					singleGroup = append(singleGroup, sn)
-				}
-			})
-
-			singleSynonymObj := Synonym{}
-
-			if len(tempDef) > 0 {
-				singleSynonymObj.Definition = tempDef[0]
-				singleSynonymObj.PartsOfSpeech = tempPoS[0]
-				singleSynonymObj.Syns = singleGroup
-				finalResult.Synonyms = append(finalResult.Synonyms, singleSynonymObj)
-
-			}
-
-			// now find the antonyms
-			antonyms := []string{}
-			aCard := root.Find("[data-type='thesaurus-antonyms-card']")
-			fmt.Println(aCard.Length())
-			aCard.Find("li").Each(func(i int, s *goquery.Selection) {
-				an := strings.TrimSpace(strings.ReplaceAll(s.Text(), "\n", " "))
-
-				if len(an) > 0 {
-					antonyms = append(antonyms, an)
-				}
-			})
-			finalResult.Antonyms = antonyms
-		},
-		//BrowserEndpoint: "ws://localhost:3000",
-	}).Start()
-
-	return finalResult, err
-
-	// Request the HTML page.
-	res, err := http.Get("https://www.thesaurus.com/browse/" + word)
+	err = chromedp.Run(ctx,
+		chromedp.Navigate(StartURLs),
+		// chromedp.WaitVisible("body"),
+		chromedp.Sleep(500*time.Millisecond),
+	)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("=========body==========")
-	fmt.Println(res.Status)
-
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-
-		return finalResult, errors.New(res.Status)
-		// log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
-	}
-
-	// Load the HTML document
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
+		fmt.Println(err)
 		return finalResult, err
-		// log.Fatal(err)
 	}
 
-	container := doc.Filter(".wjLcgFJpqs9M6QJsPf5v")
+	checkRootXpath := "/html/body/div[1]/div/main/div[2]/div[2]/div[1]/section/div/h1"
 
-	fmt.Println(container.Length())
+	// Execute JavaScript in the browser context to get total number of elements matching the XPath expression
+	var checkRoot int
+	err = chromedp.Run(ctx, chromedp.Evaluate(fmt.Sprintf(`(function() {
+            var elements = document.evaluate('%s', document, null, XPathResult.ANY_TYPE, null);
+            var length = 0;
+            while (elements.iterateNext()) {
+                length++;
+            }
+            return length;
+        })()`, checkRootXpath), &checkRoot))
+		
+	if err != nil {
+		fmt.Println(err)
+		return finalResult, err
+	}
 
-	// container := doc.Find(".MainContentContainer")
-
-	// inside MainContentContainer
-	// first ul parts of speech with definition
-	// second ul synonyms
-	// and followed by more synonyms for parts of speech
-	// inside #antonyms the ul is the antonyms
-
-	// check if definition is available or not
-	defs := container.Find(".ew5makj1")
-	// defs := container.Find("ul:first-child")
-
-	if defs.Length() == 0 {
-		fmt.Println("No definition available")
+	if checkRoot == 0 {
+		fmt.Println("Root not found")
 		return finalResult, nil
 	}
 
-	// not get the parts of speech
-	defs.Each(func(i int, s *goquery.Selection) {
-		// find parts of speech
-		// fmt.Println("parts of speech", s.Find("em").Text())
-		tempPoS = append(tempPoS, s.Find("em").Text())
-		// fmt.Println("meaning", s.Find("strong").Text())
-		tempDef = append(tempDef, s.Find("strong").Text())
-	})
+	// check total parts of speech
+	totalPOSXpath := "/html/body/div[1]/div/main/div[2]/div[2]/div[2]/section/div[@data-type=\"synonym-and-antonym-card\"]"
 
-	// now find the synonyms and antonyms
+	// Execute JavaScript in the browser context to get total number of elements matching the XPath expression
+	var totalPOSLength int
+	err = chromedp.Run(ctx, chromedp.Evaluate(fmt.Sprintf(`(function() {
+            var elements = document.evaluate('%s', document, null, XPathResult.ANY_TYPE, null);
+            var length = 0;
+            while (elements.iterateNext()) {
+                length++;
+            }
+            return length;
+        })()`, totalPOSXpath), &totalPOSLength))
 
-	// len := container.Find("ul.e1ccqdb60").Length()
-	// synonyms := container.Find("ul.e1ccqdb60").First().Find("li").Each(func(i int, s *goquery.Selection) {
-	// 	fmt.Println(s.Find("a").Text())
-	// })
-
-	// synonyms := [][]string{}
-	singleSynonymObj := Synonym{}
-
-	// check if second synonym is available
-	for i := 0; i < defs.Length(); i++ {
-		singleGroup := []string{}
-		container.Find("ul").Eq(i + 1).Find("li").Each(func(i int, s *goquery.Selection) {
-			// fmt.Println(s.Find("a").Text())
-			sn := strings.TrimSpace(strings.ReplaceAll(s.Find("a").Text(), "\n", " "))
-			if len(sn) > 0 {
-				singleGroup = append(singleGroup, sn)
-			}
-
-		})
-		singleSynonymObj.Definition = tempDef[i]
-		singleSynonymObj.PartsOfSpeech = tempPoS[i]
-		singleSynonymObj.Syns = singleGroup
-
-		finalResult.Synonyms = append(finalResult.Synonyms, singleSynonymObj)
-
-		// synonyms = append(synonyms, singleGroup)
+	if err != nil {
+		fmt.Println("No synonym found")
+		return finalResult, nil
 	}
 
-	// fmt.Println(synonyms)
+	if totalPOSLength == 0 {
+		fmt.Println("No synonym found")
+		return finalResult, nil
+	}
 
-	antonyms := []string{}
+	fmt.Println("Total POS length:", totalPOSLength)
 
-	// find antonyms
-	container.Find("#antonyms ul").Find("li").Each(func(i int, s *goquery.Selection) {
-		// fmt.Println(s.Find("a").Text())
-		// check string
-		an := strings.TrimSpace(strings.ReplaceAll(s.Find("a").Text(), "\n", " "))
+	for i := 0; i < totalPOSLength; i++ {
+		var currentPos Synonym
+		var syns []string
+		// iterate over all the POS
+		synonymRoot := fmt.Sprintf("/html/body/div[1]/div/main/div[2]/div[2]/div[2]/section/div[@data-type=\"synonym-and-antonym-card\"][%v]/div[2]/div[2]/div", i+1)
 
-		if len(an) > 0 {
-			antonyms = append(antonyms, an)
+		// Execute JavaScript in the browser context to get total number of elements matching the XPath expression
+		var totalSynonymLength int
+		err = chromedp.Run(ctx, chromedp.Evaluate(fmt.Sprintf(`(function() {
+            var elements = document.evaluate('%s', document, null, XPathResult.ANY_TYPE, null);
+            var length = 0;
+            while (elements.iterateNext()) {
+                length++;
+            }
+            return length;
+        })()`, synonymRoot), &totalSynonymLength))
+
+		if err != nil {
+			fmt.Println(err)
+			continue
 		}
 
-	})
+		if totalSynonymLength == 0 {
+			fmt.Println("No synonym found")
+			return finalResult, err
+		}
 
-	finalResult.Antonyms = antonyms
-	// fmt.Println(antonyms)
+		fmt.Println("Total synonym length:", totalSynonymLength)
 
-	return finalResult, nil
+		posXpath := fmt.Sprintf(" /html/body/div[1]/div/main/div[2]/div[2]/div[2]/section/div[@data-type=\"synonym-and-antonym-card\"][%v]/div[1]/p", i+1)
+		// get the pos and definition
+		var posString string
+		_ = chromedp.Run(ctx,
+			chromedp.Evaluate(fmt.Sprintf(`document.evaluate('%s',document,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null,).singleNodeValue?.textContent`, posXpath), &posString))
+
+		poss := strings.Split(posString, " as in ")
+
+		if len(poss) == 2 {
+			currentPos.Definition = strings.TrimSpace(poss[1])
+			currentPos.PartsOfSpeech = poss[0]
+		}
+
+		fmt.Println(posString)
+
+		for j := 0; j < totalSynonymLength; j++ {
+			// Define your XPath expression
+			xpathExpression := fmt.Sprintf("/html/body/div[1]/div/main/div[2]/div[2]/div[2]/section/div[@data-type=\"synonym-and-antonym-card\"][%v]/div[2]/div[2]/div[%v]/ul/li", i+1, j+1)
+
+			// Check if the XPath expression is valid
+			var isValid bool
+			err = chromedp.Run(ctx, chromedp.Evaluate(fmt.Sprintf(`(function() {
+            try {
+                document.evaluate('%s', document, null, XPathResult.ANY_TYPE, null);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        })()`, xpathExpression), &isValid))
+
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			if !isValid {
+				log.Printf("Invalid XPath expression")
+				continue
+			}
+
+			var nodes []interface{}
+			err = chromedp.Run(ctx, chromedp.Evaluate(fmt.Sprintf(`(function() {
+            var nodes = [];
+            var elements = document.evaluate('%s', document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+            for (var i = 0; i < elements.snapshotLength; i++) {
+                nodes.push(elements.snapshotItem(i).textContent.trim());
+            }
+            return nodes;
+        })()`, xpathExpression), &nodes))
+
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			// Convert interface{} slice to []string
+			for _, node := range nodes {
+				syns = append(syns, node.(string))
+			}
+
+			fmt.Println(syns)
+
+		}
+		currentPos.Syns = append(currentPos.Syns, syns...)
+		finalResult.Synonyms = append(finalResult.Synonyms, currentPos)
+
+	}
+
+	if len(finalResult.Synonyms) > 0 {
+		finalResult.Antonyms = append(finalResult.Antonyms, "")
+	}
+
+	return finalResult, err
 
 }
